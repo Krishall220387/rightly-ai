@@ -1,0 +1,14 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Home - Rightly.ai{% endblock %}
+
+{% block content %}
+<div class="text-center">
+    <h1>Welcome to Rightly.ai</h1>
+    {% if user.is_authenticated %}
+        <p>You are logged in as {{ user.username }}</p>
+    {% else %}
+        <p>Please <a href="{% url 'login' %}">login</a> or <a href="{% url 'signup' %}">sign up</a> to continue.</p>
+    {% endif %}
+</div>
+{% endblock %} 

@@ -1,0 +1,105 @@
+{% extends "core/base.html" %}
+
+{% block title %}Manage Documents - Rightly.ai{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Manage Documents</h1>
+        <a href="{% url 'core:upload_document' %}" class="btn btn-primary">
+            <i class="fas fa-upload me-2"></i>Upload New Document
+        </a>
+    </div>
+
+    {% if documents %}
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Title</th>
+                        <th>File</th>
+                        <th>Type</th>
+                        <th>Size</th>
+                        <th>Upload Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for doc in documents %}
+                    <tr>
+                        <td>{{ doc.title|default:"Untitled Document" }}</td>
+                        <td>
+                            <a href="{{ doc.file.url }}" class="text-decoration-none" target="_blank">
+                                <i class="fas fa-file me-2"></i>{{ doc.file.name|slice:"20:" }}
+                            </a>
+                        </td>
+                        <td>{{ doc.get_file_extension|upper }}</td>
+                        <td>{{ doc.get_file_size_mb }} MB</td>
+                        <td>{{ doc.uploaded_at|date:"M d, Y H:i" }}</td>
+                        <td>
+                            <div class="btn-group">
+                                <a href="{{ doc.file.url }}" class="btn btn-sm btn-outline-primary" download>
+                                    <i class="fas fa-download"></i>
+                                </a>
+                                <button type="button" class="btn btn-sm btn-outline-danger delete-document" 
+                                        data-document-id="{{ doc.id }}" data-document-title="{{ doc.title }}">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>You haven't uploaded any documents yet. 
+            <a href="{% url 'core:upload_document' %}" class="alert-link">Upload your first document</a> to get started!
+        </div>
+    {% endif %}
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to delete <span id="documentTitle"></span>? This action cannot be undone.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteForm" method="POST" action="">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const deleteButtons = document.querySelectorAll('.delete-document');
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    const deleteForm = document.getElementById('deleteForm');
+    const documentTitle = document.getElementById('documentTitle');
+
+    deleteButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const docId = this.dataset.documentId;
+            const docTitle = this.dataset.documentTitle || 'this document';
+            documentTitle.textContent = docTitle;
+            deleteForm.action = `/delete-document/${docId}/`;
+            deleteModal.show();
+        });
+    });
+});
+</script>
+{% endblock %}
+{% endblock %} 

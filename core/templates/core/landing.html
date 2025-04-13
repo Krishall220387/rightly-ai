@@ -1,0 +1,62 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Welcome to Rightly.ai{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row min-vh-100 align-items-center">
+        <div class="col-lg-6">
+            <h1 class="display-4 fw-bold mb-4">Create SEO-Optimized Blogs with AI</h1>
+            <p class="lead mb-4">Rightly.ai helps you generate high-quality, SEO-optimized blog content that ranks higher and engages your audience.</p>
+            <div class="d-grid gap-2 d-md-flex">
+                <a href="{% url 'signup' %}" class="btn btn-primary btn-lg px-4 me-md-2">Get Started</a>
+                <a href="{% url 'login' %}" class="btn btn-outline-secondary btn-lg px-4">Sign In</a>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card shadow-lg">
+                <div class="card-body p-5">
+                    <h2 class="text-center mb-4">Sign In</h2>
+                    <form method="post" action="{% url 'login' %}">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Username</label>
+                            <input type="text" class="form-control" id="username" name="username" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Password</label>
+                            <input type="password" class="form-control" id="password" name="password" required>
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">Sign In</button>
+                        </div>
+                    </form>
+                    <div class="text-center mt-3">
+                        <p class="mb-0">Don't have an account? <a href="{% url 'signup' %}">Sign up</a></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    body {
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    }
+    .card {
+        border-radius: 15px;
+        border: none;
+    }
+    .btn-primary {
+        background-color: #2470dc;
+        border-color: #2470dc;
+    }
+    .btn-primary:hover {
+        background-color: #1a5cb8;
+        border-color: #1a5cb8;
+    }
+</style>
+{% endblock %} 

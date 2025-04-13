@@ -1,0 +1,87 @@
+{% extends "core/base.html" %}
+
+{% block title %}My Blogs - Rightly.ai{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>My Blogs</h1>
+        <a href="{% url 'core:create_blog' %}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Create New Blog
+        </a>
+    </div>
+
+    {% if blogs %}
+        <div class="row">
+            {% for blog in blogs %}
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card h-100 shadow">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="card-title mb-0">{{ blog.blog_title }}</h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="card-text">
+                                <strong>Topic:</strong> {{ blog.topic }}<br>
+                                <strong>Status:</strong> 
+                                <span class="badge {% if blog.status == 'completed' %}bg-success{% elif blog.status == 'generating' %}bg-warning{% else %}bg-secondary{% endif %}">
+                                    {{ blog.get_status_display }}
+                                </span><br>
+                                <strong>Created:</strong> {{ blog.created_at|date:"M d, Y" }}<br>
+                                <strong>Word Count:</strong> {{ blog.word_count }}
+                            </p>
+                        </div>
+                        <div class="card-footer bg-transparent">
+                            <div class="d-grid gap-2">
+                                <a href="{% url 'core:edit_blog' blog.id %}" class="btn btn-outline-primary">
+                                    <i class="fas fa-edit me-2"></i>Edit
+                                </a>
+                                <button class="btn btn-outline-danger delete-blog" data-blog-id="{{ blog.id }}">
+                                    <i class="fas fa-trash me-2"></i>Delete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>You haven't created any blogs yet. 
+            <a href="{% url 'core:create_blog' %}" class="alert-link">Create your first blog</a> to get started!
+        </div>
+    {% endif %}
+</div>
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add event listeners for delete buttons
+    document.querySelectorAll('.delete-blog').forEach(button => {
+        button.addEventListener('click', function() {
+            const blogId = this.dataset.blogId;
+            if (confirm('Are you sure you want to delete this blog? This action cannot be undone.')) {
+                fetch(`{% url 'core:delete_blog' blogId %}/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        location.reload();
+                    } else {
+                        alert('Error deleting blog: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred while deleting the blog.');
+                });
+            }
+        });
+    });
+});
+</script>
+{% endblock %}
+{% endblock %} 

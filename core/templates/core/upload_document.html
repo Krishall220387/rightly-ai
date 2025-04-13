@@ -1,0 +1,49 @@
+{% extends "core/base.html" %}
+
+{% block title %}Upload Document - Rightly.ai{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h2 class="mb-0">Upload Document</h2>
+                </div>
+                <div class="card-body">
+                    <form method="POST" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="id_title" class="form-label">Document Title</label>
+                            {{ form.title }}
+                            {% if form.title.errors %}
+                                <div class="alert alert-danger mt-2">
+                                    {{ form.title.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="mb-3">
+                            <label for="id_file" class="form-label">Document File</label>
+                            {{ form.file }}
+                            {% if form.file.errors %}
+                                <div class="alert alert-danger mt-2">
+                                    {{ form.file.errors }}
+                                </div>
+                            {% endif %}
+                            <div class="form-text">Supported formats: PDF, DOC, DOCX. Maximum size: 10MB</div>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-upload me-2"></i>Upload Document
+                            </button>
+                            <a href="{% url 'core:dashboard' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

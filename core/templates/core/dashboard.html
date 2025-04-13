@@ -1,0 +1,271 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Dashboard - Rightly.ai{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Left Sidebar -->
+        <div class="col-md-3 col-lg-2 d-md-block bg-light sidebar">
+            <div class="position-sticky pt-3">
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="{% url 'core:dashboard' %}">
+                            <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'core:create_blog' %}">
+                            <i class="fas fa-plus-circle me-2"></i>Create Blog
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'core:logout' %}">
+                            <i class="fas fa-sign-out-alt me-2"></i>Sign Out
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-md-9 col-lg-10 ms-sm-auto px-md-4">
+            <!-- Top Bar -->
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <h1 class="h2">Dashboard</h1>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#uploadDocumentModal">
+                        <i class="fas fa-upload me-2"></i>Upload Document
+                    </button>
+                </div>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Total Blogs</h5>
+                            <p class="card-text display-4">{{ total_blogs }}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Total Documents</h5>
+                            <p class="card-text display-4">{{ total_documents }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search Bar -->
+            <div class="mb-4">
+                <div class="input-group">
+                    <input type="text" class="form-control" id="searchInput" placeholder="Search blogs by topic, date, or month...">
+                    <button class="btn btn-outline-secondary" type="button">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Blog Cards -->
+            <div class="row" id="blogCards">
+                {% for blog in blogs %}
+                <div class="col-md-6 col-lg-4 mb-4 blog-card" data-topic="{{ blog.topic|lower }}" data-date="{{ blog.created_at|date:'Y-m-d' }}">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ blog.blog_title }}</h5>
+                            <p class="card-text">
+                                <small class="text-muted">Created: {{ blog.created_at|date:"F j, Y" }}</small>
+                            </p>
+                            <p class="card-text">{{ blog.topic }}</p>
+                        </div>
+                        <div class="card-footer bg-transparent">
+                            <div class="btn-group w-100">
+                                <a href="{% url 'core:edit_blog' blog.id %}" class="btn btn-outline-primary">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <a href="{% url 'core:download_blog' blog.id %}" class="btn btn-outline-success">
+                                    <i class="fas fa-download"></i>
+                                </a>
+                                <button class="btn btn-outline-danger delete-blog" data-blog-id="{{ blog.id }}">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Upload Document Modal -->
+<div class="modal fade" id="uploadDocumentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Upload Document</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="uploadDocumentForm" method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="documentTitle" class="form-label">Title</label>
+                        <input type="text" class="form-control" id="documentTitle" name="title" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="documentFile" class="form-label">File</label>
+                        <input type="file" class="form-control" id="documentFile" name="file" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Upload</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .sidebar {
+        position: fixed;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        z-index: 100;
+        padding: 48px 0 0;
+        box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
+    }
+
+    .sidebar .nav-link {
+        font-weight: 500;
+        color: #333;
+        padding: 0.5rem 1rem;
+    }
+
+    .sidebar .nav-link.active {
+        color: #2470dc;
+    }
+
+    .sidebar .nav-link:hover {
+        color: #2470dc;
+    }
+
+    .card {
+        border: none;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        transition: transform 0.2s;
+    }
+
+    .card:hover {
+        transform: translateY(-5px);
+    }
+
+    .btn-group .btn {
+        border-radius: 0;
+    }
+
+    .btn-group .btn:first-child {
+        border-top-left-radius: 4px;
+        border-bottom-left-radius: 4px;
+    }
+
+    .btn-group .btn:last-child {
+        border-top-right-radius: 4px;
+        border-bottom-right-radius: 4px;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Search functionality
+    document.getElementById('searchInput').addEventListener('input', function(e) {
+        const searchTerm = e.target.value.toLowerCase();
+        const blogCards = document.querySelectorAll('.blog-card');
+        
+        blogCards.forEach(card => {
+            const topic = card.dataset.topic;
+            const date = card.dataset.date;
+            
+            if (topic.includes(searchTerm) || date.includes(searchTerm)) {
+                card.style.display = '';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    });
+
+    // Document upload handling
+    document.getElementById('uploadDocumentForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        
+        fetch('{% url "core:upload_document" %}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Close modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('uploadDocumentModal'));
+                modal.hide();
+                
+                // Show success message
+                alert('Document uploaded successfully!');
+                
+                // Refresh the page to show updated document count
+                window.location.reload();
+            } else {
+                alert(data.error || 'Error uploading document');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error uploading document');
+        });
+    });
+
+    // Delete blog handling
+    document.querySelectorAll('.delete-blog').forEach(button => {
+        button.addEventListener('click', function() {
+            if (confirm('Are you sure you want to delete this blog?')) {
+                const blogId = this.dataset.blogId;
+                
+                fetch(`/delete-blog/${blogId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        // Remove the blog card from the DOM
+                        this.closest('.blog-card').remove();
+                        // Show success message
+                        alert('Blog deleted successfully!');
+                    } else {
+                        alert(data.message || 'Error deleting blog');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error deleting blog');
+                });
+            }
+        });
+    });
+</script>
+{% endblock %} 

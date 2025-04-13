@@ -1,0 +1,197 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}Edit Blog - Rightly.ai{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-body">
+            <h1 class="card-title mb-4" id="blogTitle" contenteditable="true">{{ blog.blog_title }}</h1>
+            
+            <!-- Keywords Section -->
+            <div class="mb-4">
+                <h4>Keywords</h4>
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Target Keywords</h6>
+                        <div class="keyword-tags">
+                            {% for keyword in blog.target_keywords %}
+                                <span class="keyword-tag">{{ keyword }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>AI Suggested Keywords</h6>
+                        <div class="keyword-tags">
+                            {% for keyword in blog.additional_keywords %}
+                                <span class="keyword-tag">{{ keyword }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Blog Outline Section -->
+            <div class="mb-4">
+                <h4>Blog Outline</h4>
+                <div id="outlineEditor" class="form-control editor" contenteditable="true" style="min-height: 200px;">
+                    {{ blog.blog_outline|safe }}
+                </div>
+            </div>
+            
+            <!-- Blog Draft Section -->
+            <div class="mb-4">
+                <h4>Blog Draft</h4>
+                <div id="draftEditor" class="form-control editor" contenteditable="true" style="min-height: 400px;">
+                    {{ blog.blog_draft|safe }}
+                </div>
+                <small class="text-muted">This content is optimized for SEO and generated to be 100% human-like.</small>
+            </div>
+
+            <div class="d-flex gap-2">
+                <!-- Grammar Check Button -->
+                <button class="btn btn-outline-primary" id="checkGrammarBtn">
+                    <i class="fas fa-spell-check"></i> Check Grammar
+                </button>
+
+                <!-- Save Changes Button -->
+                <button class="btn btn-success" id="saveChangesBtn">
+                    <i class="fas fa-save"></i> Save Changes
+                </button>
+
+                <!-- Download Button -->
+                <a href="{% url 'core:download_blog' blog.id %}" class="btn btn-primary">
+                    <i class="fas fa-download"></i> Download as Word
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .keyword-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 8px;
+    }
+    
+    .keyword-tag {
+        background: #e9ecef;
+        padding: 4px 12px;
+        border-radius: 16px;
+        font-size: 14px;
+    }
+    
+    .editor {
+        padding: 1rem;
+        border: 1px solid #ced4da;
+        border-radius: 0.25rem;
+        outline: none;
+        font-family: 'Arial', sans-serif;
+        line-height: 1.6;
+    }
+    
+    .editor:focus {
+        border-color: #86b7fe;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    }
+    
+    .grammar-suggestion {
+        background-color: #fff3cd;
+        border-bottom: 2px wavy #ffc107;
+        cursor: pointer;
+    }
+
+    [contenteditable="true"] {
+        outline: none;
+    }
+
+    #blogTitle {
+        padding: 0.5rem;
+        border-radius: 0.25rem;
+    }
+
+    #blogTitle:focus {
+        background-color: #f8f9fa;
+    }
+</style>
+
+<script>
+// Grammar check functionality
+document.getElementById('checkGrammarBtn').addEventListener('click', async function() {
+    const draftContent = document.getElementById('draftEditor').innerHTML;
+    
+    try {
+        const response = await fetch('/check-grammar/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({ text: draftContent })
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            // Implement grammar suggestion highlighting
+            highlightGrammarSuggestions(data.suggestions);
+        }
+    } catch (error) {
+        console.error('Error checking grammar:', error);
+        alert('Error checking grammar. Please try again.');
+    }
+});
+
+// Save changes functionality
+document.getElementById('saveChangesBtn').addEventListener('click', async function() {
+    const blogData = {
+        blog_title: document.getElementById('blogTitle').textContent,
+        blog_outline: document.getElementById('outlineEditor').innerHTML,
+        blog_draft: document.getElementById('draftEditor').innerHTML
+    };
+    
+    try {
+        const response = await fetch('{% url "core:update_blog" blog.id %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify(blogData)
+        });
+        
+        if (response.ok) {
+            alert('Changes saved successfully!');
+        } else {
+            const error = await response.json();
+            alert(error.error || 'Error saving changes. Please try again.');
+        }
+    } catch (error) {
+        console.error('Error saving changes:', error);
+        alert('Error saving changes. Please try again.');
+    }
+});
+
+function highlightGrammarSuggestions(suggestions) {
+    const draftEditor = document.getElementById('draftEditor');
+    let content = draftEditor.innerHTML;
+    
+    // Sort suggestions by position (descending) to avoid offset issues
+    suggestions.sort((a, b) => b.from - a.from);
+    
+    suggestions.forEach(suggestion => {
+        const before = content.substring(0, suggestion.from);
+        const highlighted = content.substring(suggestion.from, suggestion.to);
+        const after = content.substring(suggestion.to);
+        
+        content = before +
+            `<span class="grammar-suggestion" title="${suggestion.message}">${highlighted}</span>` +
+            after;
+    });
+    
+    draftEditor.innerHTML = content;
+}
+</script>
+{% endblock %} 

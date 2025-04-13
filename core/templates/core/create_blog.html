@@ -1,0 +1,242 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}Create Blog - Rightly.ai{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Create New Blog</h2>
+    <form id="createBlogForm" method="POST">
+        {% csrf_token %}
+        <div class="mb-3">
+            <label for="topic" class="form-label">Blog Topic</label>
+            <input type="text" class="form-control" id="topic" name="topic" required>
+        </div>
+        
+        <div class="mb-3">
+            <label for="tone" class="form-label">Writing Tone</label>
+            <select class="form-select" id="tone" name="tone">
+                <option value="professional">Professional</option>
+                <option value="casual">Casual</option>
+                <option value="friendly">Friendly</option>
+                <option value="formal">Formal</option>
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label for="user_keywords" class="form-label">Target Keywords (comma separated)</label>
+            <input type="text" class="form-control" id="user_keywords" name="user_keywords" placeholder="Enter keywords separated by commas">
+            <small class="form-text text-muted">Enter your target keywords. AI will suggest additional keywords based on competitor research.</small>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Select Knowledge Base Documents</label>
+            <div class="document-selection border rounded p-3" style="max-height: 200px; overflow-y: auto;">
+                {% for document in documents %}
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="selected_documents" value="{{ document.id }}" id="doc_{{ document.id }}">
+                    <label class="form-check-label" for="doc_{{ document.id }}">
+                        {{ document.title }}
+                        <small class="text-muted">({{ document.file.name|slice:"-20:" }})</small>
+                    </label>
+                </div>
+                {% empty %}
+                <p class="text-muted mb-0">No documents available. Please <a href="{% url 'core:upload_document' %}">upload documents</a> first to use as knowledge base.</p>
+                {% endfor %}
+            </div>
+            <small class="form-text text-muted">Select one or more documents to provide context about your products/services. AI will combine this with web research.</small>
+        </div>
+
+        <button type="submit" class="btn btn-primary" id="generateBlogBtn">
+            <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+            Generate Blog
+        </button>
+    </form>
+</div>
+
+<!-- Blog Generation Result -->
+<div class="container mt-5" id="blogResult" style="display: none;">
+    <div class="card">
+        <div class="card-body">
+            <h3 class="card-title mb-4" id="blogTitle"></h3>
+            
+            <!-- Keywords Section -->
+            <div class="mb-4">
+                <h4>Keywords</h4>
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Target Keywords</h6>
+                        <div id="targetKeywords" class="keyword-tags"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>AI Suggested Keywords</h6>
+                        <div id="aiKeywords" class="keyword-tags"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Blog Outline Section -->
+            <div class="mb-4">
+                <h4>Blog Outline</h4>
+                <div id="outlineEditor" class="form-control" contenteditable="true" style="min-height: 200px;"></div>
+            </div>
+            
+            <!-- Blog Draft Section -->
+            <div class="mb-4">
+                <h4>Blog Draft</h4>
+                <div id="draftEditor" class="form-control" contenteditable="true" style="min-height: 400px;"></div>
+                <small class="text-muted">This content is optimized for SEO and generated to be 100% human-like.</small>
+            </div>
+
+            <!-- Grammar Check Button -->
+            <button class="btn btn-outline-primary mb-3" id="checkGrammarBtn">
+                Check Grammar
+            </button>
+
+            <!-- Save Changes Button -->
+            <button class="btn btn-success" id="saveChangesBtn">
+                Save Changes
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+    .keyword-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 8px;
+    }
+    
+    .keyword-tag {
+        background: #e9ecef;
+        padding: 4px 12px;
+        border-radius: 16px;
+        font-size: 14px;
+    }
+    
+    .grammar-suggestion {
+        background-color: #fff3cd;
+        border-bottom: 2px wavy #ffc107;
+        cursor: pointer;
+    }
+    
+    [contenteditable="true"] {
+        padding: 1rem;
+        border: 1px solid #ced4da;
+        border-radius: 0.25rem;
+        outline: none;
+    }
+    
+    [contenteditable="true"]:focus {
+        border-color: #86b7fe;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    }
+</style>
+
+<script>
+document.getElementById('createBlogForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    // Show loading state
+    const generateBtn = document.getElementById('generateBlogBtn');
+    generateBtn.disabled = true;
+    generateBtn.querySelector('.spinner-border').classList.remove('d-none');
+    
+    const formData = new FormData();
+    formData.append('topic', document.getElementById('topic').value);
+    formData.append('tone', document.getElementById('tone').value);
+    formData.append('user_keywords', document.getElementById('user_keywords').value);
+    
+    // Get selected document IDs
+    const selectedDocs = Array.from(document.querySelectorAll('input[name="selected_documents"]:checked'))
+        .map(checkbox => checkbox.value);
+    selectedDocs.forEach(docId => {
+        formData.append('selected_documents', docId);
+    });
+
+    try {
+        const response = await fetch('/create-blog/', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            // Redirect to edit page
+            window.location.href = `/edit-blog/${data.id}/`;
+        } else {
+            const error = await response.json();
+            alert(error.error || 'An error occurred while creating the blog');
+        }
+    } catch (error) {
+        alert('An error occurred while creating the blog');
+        console.error('Error:', error);
+    } finally {
+        // Reset loading state
+        generateBtn.disabled = false;
+        generateBtn.querySelector('.spinner-border').classList.add('d-none');
+    }
+});
+
+function displayKeywords(keywords, containerId) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = keywords.map(keyword => 
+        `<span class="keyword-tag">${keyword}</span>`
+    ).join('');
+}
+
+// Grammar check functionality
+document.getElementById('checkGrammarBtn').addEventListener('click', async function() {
+    const draftContent = document.getElementById('draftEditor').innerHTML;
+    
+    try {
+        const response = await fetch('/check-grammar/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify({ text: draftContent })
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            highlightGrammarSuggestions(data.suggestions);
+        }
+    } catch (error) {
+        console.error('Error checking grammar:', error);
+    }
+});
+
+// Save changes functionality
+document.getElementById('saveChangesBtn').addEventListener('click', async function() {
+    const blogData = {
+        blog_title: document.getElementById('blogTitle').textContent,
+        blog_outline: document.getElementById('outlineEditor').innerHTML,
+        blog_draft: document.getElementById('draftEditor').innerHTML
+    };
+    
+    try {
+        const response = await fetch('/update-blog/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify(blogData)
+        });
+        
+        if (response.ok) {
+            window.location.href = '/dashboard/';
+        }
+    } catch (error) {
+        console.error('Error saving changes:', error);
+    }
+});
+</script>
+{% endblock %} 
