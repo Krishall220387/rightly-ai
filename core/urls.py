@@ -18,5 +18,4 @@ urlpatterns = [
     path('delete-blog/<int:blog_id>/', views.delete_blog, name='delete_blog'),
     path('download-blog/<int:blog_id>/', views.download_blog, name='download_blog'),
     path('check-grammar/', views.check_grammar_view, name='check_grammar'),
-    path('debug-urls/', views.debug_urls, name='debug_urls'),  # Temporary debug URL
 ] 

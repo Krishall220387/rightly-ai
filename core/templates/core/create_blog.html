@@ -54,49 +54,130 @@
     </form>
 </div>
 
-<!-- Blog Generation Result -->
+<!-- Blog Result Section -->
 <div class="container mt-5" id="blogResult" style="display: none;">
     <div class="card">
         <div class="card-body">
-            <h3 class="card-title mb-4" id="blogTitle"></h3>
+            <!-- Title Section -->
+            <div class="mb-4">
+                <h3 class="card-title mb-2" id="blogTitle"></h3>
+                <p class="text-muted" id="metaDescription"></p>
+            </div>
             
             <!-- Keywords Section -->
             <div class="mb-4">
-                <h4>Keywords</h4>
+                <h4>Keywords Analysis</h4>
                 <div class="row">
-                    <div class="col-md-6">
+                    <div class="col-md-6 mb-3">
                         <h6>Target Keywords</h6>
                         <div id="targetKeywords" class="keyword-tags"></div>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-6 mb-3">
                         <h6>AI Suggested Keywords</h6>
                         <div id="aiKeywords" class="keyword-tags"></div>
                     </div>
+                    <div class="col-md-6 mb-3">
+                        <h6>LSI Keywords</h6>
+                        <div id="lsiKeywords" class="keyword-tags"></div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <h6>Semantic Variations</h6>
+                        <div id="semanticVariations" class="keyword-tags"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Word Count Recommendation -->
+            <div class="mb-4">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <span id="wordCountRecommendation"></span>
                 </div>
             </div>
             
-            <!-- Blog Outline Section -->
-            <div class="mb-4">
-                <h4>Blog Outline</h4>
-                <div id="outlineEditor" class="form-control" contenteditable="true" style="min-height: 200px;"></div>
-            </div>
+            <!-- Blog Content Tabs -->
+            <ul class="nav nav-tabs mb-3" role="tablist">
+                <li class="nav-item">
+                    <a class="nav-link active" data-bs-toggle="tab" href="#outline" role="tab">
+                        <i class="fas fa-list me-2"></i>Outline
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-bs-toggle="tab" href="#draft" role="tab">
+                        <i class="fas fa-pen me-2"></i>Draft
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-bs-toggle="tab" href="#seoRecommendations" role="tab">
+                        <i class="fas fa-chart-line me-2"></i>SEO Insights
+                    </a>
+                </li>
+            </ul>
             
-            <!-- Blog Draft Section -->
-            <div class="mb-4">
-                <h4>Blog Draft</h4>
-                <div id="draftEditor" class="form-control" contenteditable="true" style="min-height: 400px;"></div>
-                <small class="text-muted">This content is optimized for SEO and generated to be 100% human-like.</small>
+            <div class="tab-content">
+                <!-- Outline Tab -->
+                <div class="tab-pane fade show active" id="outline" role="tabpanel">
+                    <div id="outlineEditor" class="editor" contenteditable="true"></div>
+                </div>
+                
+                <!-- Draft Tab -->
+                <div class="tab-pane fade" id="draft" role="tabpanel">
+                    <div id="draftEditor" class="editor" contenteditable="true"></div>
+                    <div class="d-flex justify-content-between align-items-center mt-3">
+                        <small class="text-muted">
+                            <i class="fas fa-shield-alt me-1"></i>
+                            This content is optimized for SEO and generated to be 100% human-like
+                        </small>
+                        <span class="badge bg-primary" id="currentWordCount">0 words</span>
+                    </div>
+                </div>
+
+                <!-- SEO Recommendations Tab -->
+                <div class="tab-pane fade" id="seoRecommendations" role="tabpanel">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title">
+                                        <i class="fas fa-link me-2"></i>Internal Linking
+                                    </h5>
+                                    <ul class="list-unstyled" id="internalLinking"></ul>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title">
+                                        <i class="fas fa-star me-2"></i>Featured Snippet Opportunities
+                                    </h5>
+                                    <ul class="list-unstyled" id="snippetOpportunities"></ul>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title">
+                                        <i class="fas fa-puzzle-piece me-2"></i>Content Gaps
+                                    </h5>
+                                    <ul class="list-unstyled" id="contentGaps"></ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <!-- Grammar Check Button -->
-            <button class="btn btn-outline-primary mb-3" id="checkGrammarBtn">
-                Check Grammar
-            </button>
-
-            <!-- Save Changes Button -->
-            <button class="btn btn-success" id="saveChangesBtn">
-                Save Changes
-            </button>
+            <!-- Action Buttons -->
+            <div class="mt-4">
+                <button class="btn btn-outline-primary me-2" id="checkGrammarBtn">
+                    <i class="fas fa-spell-check me-2"></i>Check Grammar
+                </button>
+                <button class="btn btn-success" id="saveChangesBtn">
+                    <i class="fas fa-save me-2"></i>Save Changes
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -113,25 +194,58 @@
         background: #e9ecef;
         padding: 4px 12px;
         border-radius: 16px;
-        font-size: 14px;
+        font-size: 0.875rem;
+        color: #495057;
+        transition: all 0.2s;
+    }
+
+    .keyword-tag:hover {
+        background: #dee2e6;
+        transform: translateY(-1px);
     }
     
+    .editor {
+        min-height: 400px;
+        padding: 2rem;
+        border: 1px solid #dee2e6;
+        border-radius: 0.375rem;
+        background: #fff;
+        font-family: 'Arial', sans-serif;
+        line-height: 1.7;
+        transition: all 0.3s;
+    }
+    
+    .editor:focus {
+        border-color: #86b7fe;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.1);
+        outline: none;
+    }
+
     .grammar-suggestion {
         background-color: #fff3cd;
         border-bottom: 2px wavy #ffc107;
         cursor: pointer;
     }
-    
-    [contenteditable="true"] {
-        padding: 1rem;
-        border: 1px solid #ced4da;
-        border-radius: 0.25rem;
-        outline: none;
+
+    .nav-tabs .nav-link {
+        color: #6c757d;
+        font-weight: 500;
+        padding: 0.75rem 1rem;
     }
-    
-    [contenteditable="true"]:focus {
-        border-color: #86b7fe;
-        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+
+    .nav-tabs .nav-link.active {
+        color: #0d6efd;
+        font-weight: 600;
+    }
+
+    .card {
+        border: none;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        transition: all 0.3s;
+    }
+
+    .card:hover {
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
     }
 </style>
 

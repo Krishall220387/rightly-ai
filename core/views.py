@@ -74,7 +74,7 @@ def user_logout(request):
     """
     logout(request)
     messages.info(request, 'You have been logged out successfully.')
-    return redirect('login')
+    return redirect('core:login')
 
 @login_required
 def dashboard(request):
@@ -93,22 +93,37 @@ def upload_document(request):
     """
     Handle document upload with form validation and file processing.
     """
-    print("Debug reverse URL:", reverse('core:upload_document'))
-    
     if request.method == 'POST':
-        form = DocumentUploadForm(request.POST, request.FILES)
-        if form.is_valid():
-            document = form.save(commit=False)
-            document.user = request.user
+        try:
+            # Get the uploaded file and title
+            uploaded_file = request.FILES.get('file')
+            title = request.POST.get('title', uploaded_file.name)
+            
+            if not uploaded_file:
+                messages.error(request, 'No file was uploaded.')
+                return redirect('core:upload_document')
+            
+            # Create document directory if it doesn't exist
+            user_doc_dir = os.path.join('media', 'documents', f'user_{request.user.id}')
+            os.makedirs(user_doc_dir, exist_ok=True)
+            
+            # Create and save the document
+            document = Document(
+                user=request.user,
+                title=title,
+                file=uploaded_file
+            )
             document.save()
+            
             messages.success(request, 'Document uploaded successfully!')
             return redirect('core:dashboard')
-        else:
-            messages.error(request, 'Error uploading document. Please try again.')
-    else:
-        form = DocumentUploadForm()
+            
+        except Exception as e:
+            print(f"Error uploading document: {str(e)}")
+            messages.error(request, f'Error uploading document: {str(e)}')
+            return redirect('core:upload_document')
     
-    return render(request, 'core/upload_document.html', {'form': form})
+    return render(request, 'core/upload_document.html')
 
 @login_required
 def delete_blog(request, blog_id):
@@ -153,21 +168,52 @@ def create_blog(request):
         # Validate required fields
         if not topic:
             return JsonResponse({'error': 'Topic is required'}, status=400)
+        
+        if not document_ids:
+            return JsonResponse({'error': 'Please select at least one document'}, status=400)
 
         # Process selected documents
-        documents_content = ""
+        documents_content = []
+        successful_extractions = 0
+        
         try:
             documents = Document.objects.filter(id__in=document_ids, user=request.user)
+            if not documents.exists():
+                return JsonResponse({'error': 'No valid documents selected'}, status=400)
+            
             for doc in documents:
-                content = extract_text_from_file(doc.file)
-                documents_content += f"\n\nDocument: {doc.title}\n{content}"
+                try:
+                    print(f"Processing document: {doc.title}")
+                    content = extract_text_from_file(doc.file)
+                    
+                    if content and content not in ["Error extracting text from file", 
+                                                 "No content could be extracted",
+                                                 "No text could be extracted from PDF",
+                                                 "No text could be extracted from DOCX"]:
+                        documents_content.append(f"\n\nDocument: {doc.title}\n{content}")
+                        successful_extractions += 1
+                    else:
+                        print(f"No content extracted from document: {doc.title}")
+                        
+                except Exception as e:
+                    print(f"Error processing document {doc.title}: {str(e)}")
+                    continue
+            
+            if successful_extractions == 0:
+                return JsonResponse({
+                    'error': 'Could not extract content from any of the selected documents. Please ensure the documents contain readable text.'
+                }, status=400)
+                
+            documents_content = "\n\n".join(documents_content)
+                
         except Exception as e:
             print(f"Error processing documents: {str(e)}")
             return JsonResponse({'error': f'Error processing documents: {str(e)}'}, status=400)
 
         print(f"Generating blog content for topic: {topic}")
         print(f"Parameters - Tone: {tone}, Keywords: {user_keywords}")
-        print(f"Documents content length: {len(documents_content)} characters")
+        print(f"Successfully processed {successful_extractions} documents")
+        print(f"Total content length: {len(documents_content)} characters")
 
         # Generate blog content using OpenAI
         try:
@@ -189,13 +235,13 @@ def create_blog(request):
                 topic=topic,
                 tone=tone,
                 target_keywords=user_keywords,
-                additional_keywords=result['keywords']['additional_keywords']
+                additional_keywords=result.get('keywords', {}).get('additional_keywords', [])
             )
             
             # Then update with generated content
-            blog.blog_title = result['blog_title']
-            blog.blog_outline = result['blog_outline']
-            blog.blog_draft = result['blog_draft']
+            blog.blog_title = result.get('blog_title', topic)
+            blog.blog_outline = result.get('blog_outline', '')
+            blog.blog_draft = result.get('blog_draft', '')
             blog.save()
             
             # Associate selected documents with the blog
@@ -212,7 +258,7 @@ def create_blog(request):
                 'blog_draft': blog.blog_draft,
                 'keywords': {
                     'user_keywords': user_keywords,
-                    'additional_keywords': result['keywords']['additional_keywords']
+                    'additional_keywords': result.get('keywords', {}).get('additional_keywords', [])
                 }
             }, status=201)
 
@@ -293,6 +339,23 @@ def edit_blog(request, blog_id):
     """
     blog = get_object_or_404(Blog, id=blog_id, user=request.user)
     
+    # Enhanced debug logging
+    print("\n" + "="*80)
+    print("BLOG DATA DEBUG LOG")
+    print("="*80)
+    print(f"Blog ID: {blog.id}")
+    print(f"Title: {blog.blog_title}")
+    print(f"Topic: {blog.topic}")
+    print(f"Target Keywords: {blog.target_keywords}")
+    print(f"Additional Keywords: {blog.additional_keywords}")
+    print("\nOutline Data:")
+    print(f"Type: {type(blog.blog_outline)}")
+    print(f"Raw Value: {blog.blog_outline}")
+    print("\nDraft Data:")
+    print(f"Type: {type(blog.blog_draft)}")
+    print(f"Raw Value: {blog.blog_draft}")
+    print("="*80)
+    
     if request.method == 'POST':
         form = BlogCreationForm(request.POST, instance=blog)
         if form.is_valid():
@@ -301,21 +364,77 @@ def edit_blog(request, blog_id):
             return JsonResponse({'success': True})
         else:
             return JsonResponse({'success': False, 'error': form.errors})
-    
-    # Parse the blog outline if it's JSON
-    outline_data = None
-    try:
-        if blog.blog_outline:
-            outline_data = json.loads(blog.blog_outline)
-    except json.JSONDecodeError:
-        # If not valid JSON, treat as plain text
-        pass
-    
-    return render(request, 'core/edit_blog.html', {
+
+    # Create a context dictionary with the blog data
+    context = {
         'blog': blog,
         'form': BlogCreationForm(instance=blog),
-        'outline_data': outline_data
-    })
+    }
+    
+    return render(request, 'core/edit_blog.html', context)
+
+def format_blog_content(content):
+    """Helper function to format blog content into HTML"""
+    if not content:
+        return ""
+
+    if isinstance(content, str):
+        try:
+            content = json.loads(content)
+        except json.JSONDecodeError:
+            return f"<div class='content-section'>{content}</div>"
+
+    html = ['<div class="content-container">']
+    
+    # Add Introduction
+    if 'introduction' in content:
+        html.append('<div class="section introduction-section">')
+        html.append('<h2 class="section-title">Introduction</h2>')
+        if isinstance(content['introduction'], dict):
+            html.append(f'<div class="section-content">{content["introduction"]["content"]}</div>')
+        else:
+            html.append(f'<div class="section-content">{content["introduction"]}</div>')
+        html.append('</div>')
+
+    # Process main sections (H2 and H3)
+    sections = [(k, v) for k, v in content.items() if k.startswith('H2_')]
+    sections.sort(key=lambda x: int(x[0].split('_')[1]))
+
+    for h2_key, h2_value in sections:
+        html.append('<div class="section main-section">')
+        if isinstance(h2_value, dict):
+            html.append(f'<h2 class="section-title">{h2_value["content"]}</h2>')
+        else:
+            html.append(f'<h2 class="section-title">{h2_value}</h2>')
+        
+        # Find and add corresponding H3 sections
+        h3_sections = [(k, v) for k, v in content.items() if k.startswith(f"{h2_key}_")]
+        h3_sections.sort(key=lambda x: int(x[0].split('_')[-1]))
+        
+        for h3_key, h3_value in h3_sections:
+            html.append('<div class="subsection">')
+            if isinstance(h3_value, dict):
+                html.append(f'<h3 class="subsection-title">{h3_value["content"]}</h3>')
+                if "content" in h3_value:
+                    html.append(f'<div class="subsection-content">{h3_value["content"]}</div>')
+            else:
+                html.append(f'<h3 class="subsection-title">{h3_value}</h3>')
+            html.append('</div>')
+        
+        html.append('</div>')
+
+    # Add Conclusion
+    if 'conclusion' in content:
+        html.append('<div class="section conclusion-section">')
+        html.append('<h2 class="section-title">Conclusion</h2>')
+        if isinstance(content['conclusion'], dict):
+            html.append(f'<div class="section-content">{content["conclusion"]["content"]}</div>')
+        else:
+            html.append(f'<div class="section-content">{content["conclusion"]}</div>')
+        html.append('</div>')
+
+    html.append('</div>')
+    return '\n'.join(html)
 
 @login_required
 @require_POST
@@ -438,20 +557,3 @@ def delete_document(request, document_id):
     except Exception as e:
         messages.error(request, f'Error deleting document: {str(e)}')
     return redirect('core:dashboard')
-
-@login_required
-def debug_urls(request):
-    """
-    Temporary view to debug URL resolution
-    """
-    from django.urls import reverse, get_resolver
-    from django.http import HttpResponse
-    
-    debug_info = {
-        'upload_url': reverse('core:upload_document'),
-        'current_path': request.path,
-        'available_patterns': [p for p in get_resolver().url_patterns],
-        'app_name': request.resolver_match.app_name if request.resolver_match else None
-    }
-    
-    return HttpResponse(f"Debug Info: {debug_info}")

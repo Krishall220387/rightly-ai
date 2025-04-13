@@ -3,47 +3,75 @@
 {% block title %}Upload Document - Rightly.ai{% endblock %}
 
 {% block content %}
-<div class="container my-5">
+<div class="container mt-4">
     <div class="row justify-content-center">
         <div class="col-md-8">
-            <div class="card shadow">
+            <div class="card">
                 <div class="card-header bg-primary text-white">
-                    <h2 class="mb-0">Upload Document</h2>
+                    <h4 class="mb-0">Upload Document</h4>
                 </div>
                 <div class="card-body">
-                    <form method="POST" enctype="multipart/form-data">
+                    <form method="POST" enctype="multipart/form-data" class="needs-validation" novalidate>
                         {% csrf_token %}
+                        
+                        <!-- File Upload -->
                         <div class="mb-3">
-                            <label for="id_title" class="form-label">Document Title</label>
-                            {{ form.title }}
-                            {% if form.title.errors %}
-                                <div class="alert alert-danger mt-2">
-                                    {{ form.title.errors }}
-                                </div>
-                            {% endif %}
+                            <label for="file" class="form-label">Select Document</label>
+                            <input type="file" class="form-control" id="file" name="file" accept=".pdf,.doc,.docx" required>
+                            <div class="invalid-feedback">
+                                Please select a document to upload.
+                            </div>
+                            <small class="text-muted">
+                                Supported formats: PDF, DOC, DOCX
+                            </small>
                         </div>
+
+                        <!-- Document Title -->
                         <div class="mb-3">
-                            <label for="id_file" class="form-label">Document File</label>
-                            {{ form.file }}
-                            {% if form.file.errors %}
-                                <div class="alert alert-danger mt-2">
-                                    {{ form.file.errors }}
-                                </div>
-                            {% endif %}
-                            <div class="form-text">Supported formats: PDF, DOC, DOCX. Maximum size: 10MB</div>
+                            <label for="title" class="form-label">Document Title</label>
+                            <input type="text" class="form-control" id="title" name="title" placeholder="Enter document title">
+                            <small class="text-muted">
+                                If left blank, the original filename will be used
+                            </small>
                         </div>
-                        <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-upload me-2"></i>Upload Document
-                            </button>
-                            <a href="{% url 'core:dashboard' %}" class="btn btn-outline-secondary">
-                                <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
-                            </a>
-                        </div>
+
+                        <!-- Submit Button -->
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-upload me-2"></i>Upload Document
+                        </button>
                     </form>
                 </div>
             </div>
+
+            <!-- Messages -->
+            {% if messages %}
+            <div class="mt-3">
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
         </div>
     </div>
 </div>
+
+<script>
+// Form validation
+(function () {
+    'use strict'
+    var forms = document.querySelectorAll('.needs-validation')
+    Array.prototype.slice.call(forms).forEach(function (form) {
+        form.addEventListener('submit', function (event) {
+            if (!form.checkValidity()) {
+                event.preventDefault()
+                event.stopPropagation()
+            }
+            form.classList.add('was-validated')
+        }, false)
+    })
+})()
+</script>
 {% endblock %} 

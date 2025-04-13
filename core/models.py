@@ -16,13 +16,11 @@ def document_upload_path(instance, filename):
     Returns:
         str: Path where the file should be stored
     """
-    # Get file extension
+    # Create a clean filename
     ext = filename.split('.')[-1]
-    # Create filename from title or use original filename
-    if instance.title:
-        filename = f"{slugify(instance.title)}.{ext}"
+    clean_filename = f"{instance.title.lower().replace(' ', '_') if instance.title else filename}"
     # Return path with user-specific directory
-    return f'documents/user_{instance.user.id}/{filename}'
+    return os.path.join('documents', f'user_{instance.user.id}', clean_filename)
 
 class Document(models.Model):
     """
@@ -47,14 +45,12 @@ class Document(models.Model):
         ('failed', 'Failed'),
     ]
     
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='documents')
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    title = models.CharField(max_length=255)
     file = models.FileField(
         upload_to=document_upload_path,
-        validators=[
-            FileExtensionValidator(allowed_extensions=['pdf', 'doc', 'docx'])
-        ]
+        validators=[FileExtensionValidator(allowed_extensions=['pdf', 'doc', 'docx'])]
     )
-    title = models.CharField(max_length=255, blank=True)
     uploaded_at = models.DateTimeField(auto_now_add=True)
     file_type = models.CharField(max_length=10, blank=True)
     file_size = models.IntegerField(default=0)
@@ -66,18 +62,9 @@ class Document(models.Model):
         default='pending'
     )
 
-    class Meta:
-        ordering = ['-uploaded_at']
-        verbose_name = 'Document'
-        verbose_name_plural = 'Documents'
-        indexes = [
-            models.Index(fields=['user', 'uploaded_at']),
-            models.Index(fields=['status']),
-        ]
-
     def __str__(self):
         """Return string representation of the document."""
-        return self.title or f"Document {self.pk}"
+        return self.title
 
     def save(self, *args, **kwargs):
         """
@@ -168,27 +155,26 @@ class Blog(models.Model):
         updated_at (DateTimeField): Last update timestamp
         reference_documents (ManyToManyField): Documents referenced in the blog
     """
-    TONE_CHOICES = [
-        ('professional', 'Professional'),
-        ('casual', 'Casual'),
-        ('friendly', 'Friendly'),
-        ('formal', 'Formal')
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('published', 'Published')
     ]
 
     user = models.ForeignKey(User, on_delete=models.CASCADE)
+    blog_title = models.CharField(max_length=255, blank=True)
     topic = models.CharField(max_length=255)
+    tone = models.CharField(max_length=50, default='professional')
     target_keywords = models.JSONField(default=list)
     additional_keywords = models.JSONField(default=list)
-    tone = models.CharField(max_length=20, choices=TONE_CHOICES, default='professional')
-    blog_title = models.CharField(max_length=255, blank=True, null=True)
-    blog_outline = models.TextField(blank=True)
-    blog_draft = models.TextField(blank=True)
-    reference_documents = models.ManyToManyField(Document, related_name='referenced_in_blogs', blank=True)
+    blog_outline = models.JSONField(null=True, blank=True)
+    blog_draft = models.JSONField(null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    reference_documents = models.ManyToManyField(Document, blank=True)
 
     def __str__(self):
-        return self.blog_title if self.blog_title else self.topic
+        return self.blog_title or self.topic
 
     def save(self, *args, **kwargs):
         """
@@ -211,3 +197,6 @@ class Blog(models.Model):
         self.seo_score = 0  # Placeholder
         self.save()
         return self.seo_score
+
+    class Meta:
+        ordering = ['-created_at']

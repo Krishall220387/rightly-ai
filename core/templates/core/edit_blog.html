@@ -3,77 +3,146 @@
 
 {% block title %}Edit Blog - Rightly.ai{% endblock %}
 
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'core/css/style.css' %}">
+<script src="{% static 'core/js/main.js' %}"></script>
+{% endblock %}
+
 {% block content %}
-<div class="container mt-4">
-    <div class="card">
-        <div class="card-body">
-            <h1 class="card-title mb-4" id="blogTitle" contenteditable="true">{{ blog.blog_title }}</h1>
-            
-            <!-- Keywords Section -->
-            <div class="mb-4">
-                <h4>Keywords</h4>
-                <div class="row">
-                    <div class="col-md-6">
-                        <h6>Target Keywords</h6>
+<!-- Debug output -->
+{{ blog.blog_outline|json_script:"blog-outline-data" }}
+{{ blog.blog_draft|json_script:"blog-draft-data" }}
+<script>
+    // Initial debug output
+    const blogData = {
+        title: '{{ blog.blog_title|escapejs }}',
+        outline: JSON.parse(document.getElementById('blog-outline-data').textContent),
+        draft: JSON.parse(document.getElementById('blog-draft-data').textContent)
+    };
+    console.log('Initial Blog Data:', blogData);
+</script>
+
+<div class="container-fluid mt-4">
+    <div class="row">
+        <!-- Left Sidebar - Blog Information -->
+        <div class="col-md-3">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">Blog Information</h5>
+                </div>
+                <div class="card-body">
+                    <!-- Keywords Section -->
+                    <div class="mb-4">
+                        <h6 class="fw-bold">Target Keywords</h6>
                         <div class="keyword-tags">
                             {% for keyword in blog.target_keywords %}
                                 <span class="keyword-tag">{{ keyword }}</span>
                             {% endfor %}
                         </div>
                     </div>
-                    <div class="col-md-6">
-                        <h6>AI Suggested Keywords</h6>
+                    <div class="mb-4">
+                        <h6 class="fw-bold">AI Suggested Keywords</h6>
                         <div class="keyword-tags">
                             {% for keyword in blog.additional_keywords %}
                                 <span class="keyword-tag">{{ keyword }}</span>
                             {% endfor %}
                         </div>
                     </div>
+                    <!-- Action Buttons -->
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-outline-primary btn-sm" id="checkGrammarBtn">
+                            <i class="fas fa-spell-check"></i> Check Grammar
+                        </button>
+                        <button class="btn btn-success btn-sm" id="saveChangesBtn">
+                            <i class="fas fa-save"></i> Save Changes
+                        </button>
+                        <a href="{% url 'core:download_blog' blog.id %}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-download"></i> Download as Word
+                        </a>
+                    </div>
                 </div>
             </div>
-            
-            <!-- Blog Outline Section -->
-            <div class="mb-4">
-                <h4>Blog Outline</h4>
-                <div id="outlineEditor" class="form-control editor" contenteditable="true" style="min-height: 200px;">
-                    {{ blog.blog_outline|safe }}
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="col-md-9">
+            <!-- Blog Title -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h1 class="blog-title" id="blogTitle" contenteditable="true">{{ blog.blog_title }}</h1>
                 </div>
             </div>
-            
-            <!-- Blog Draft Section -->
-            <div class="mb-4">
-                <h4>Blog Draft</h4>
-                <div id="draftEditor" class="form-control editor" contenteditable="true" style="min-height: 400px;">
-                    {{ blog.blog_draft|safe }}
+
+            <!-- Blog Content Tabs -->
+            <div class="card">
+                <div class="card-header">
+                    <ul class="nav nav-tabs card-header-tabs" role="tablist">
+                        <li class="nav-item">
+                            <a class="nav-link active" data-bs-toggle="tab" href="#outline" role="tab">
+                                <i class="fas fa-list me-2"></i>Outline
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="tab" href="#draft" role="tab">
+                                <i class="fas fa-pen me-2"></i>Draft
+                            </a>
+                        </li>
+                    </ul>
                 </div>
-                <small class="text-muted">This content is optimized for SEO and generated to be 100% human-like.</small>
-            </div>
-
-            <div class="d-flex gap-2">
-                <!-- Grammar Check Button -->
-                <button class="btn btn-outline-primary" id="checkGrammarBtn">
-                    <i class="fas fa-spell-check"></i> Check Grammar
-                </button>
-
-                <!-- Save Changes Button -->
-                <button class="btn btn-success" id="saveChangesBtn">
-                    <i class="fas fa-save"></i> Save Changes
-                </button>
-
-                <!-- Download Button -->
-                <a href="{% url 'core:download_blog' blog.id %}" class="btn btn-primary">
-                    <i class="fas fa-download"></i> Download as Word
-                </a>
+                <div class="card-body">
+                    <div class="tab-content">
+                        <!-- Outline Tab -->
+                        <div class="tab-pane fade show active" id="outline" role="tabpanel">
+                            <div id="outlineContent" class="editor">
+                                <!-- Outline content will be inserted here -->
+                                {% if not blog.blog_outline %}
+                                <p class="text-muted">No outline content available</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <!-- Draft Tab -->
+                        <div class="tab-pane fade" id="draft" role="tabpanel">
+                            <div class="d-flex justify-content-end mb-3">
+                                <div class="btn-group" role="group">
+                                    <button type="button" class="btn btn-outline-primary active" id="editTab">
+                                        <i class="fas fa-edit me-2"></i>Edit
+                                    </button>
+                                    <button type="button" class="btn btn-outline-primary" id="previewTab">
+                                        <i class="fas fa-eye me-2"></i>Preview
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="draftContent" class="editor">
+                                <textarea id="draftTextarea" class="form-control" style="min-height: 500px; width: 100%; display: block;">{{ blog.blog_draft|safe }}</textarea>
+                                <div id="draftPreview" style="display: none; min-height: 500px; overflow-y: auto;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
 <style>
+    .blog-title {
+        font-size: 2rem;
+        font-weight: 600;
+        color: #2c3e50;
+        padding: 0.5rem;
+        border-radius: 0.25rem;
+        transition: background-color 0.2s;
+    }
+
+    .blog-title:focus {
+        background-color: #f8f9fa;
+        outline: none;
+    }
+
     .keyword-tags {
         display: flex;
         flex-wrap: wrap;
-        gap: 8px;
+        gap: 6px;
         margin-top: 8px;
     }
     
@@ -81,117 +150,436 @@
         background: #e9ecef;
         padding: 4px 12px;
         border-radius: 16px;
-        font-size: 14px;
+        font-size: 0.875rem;
+        color: #495057;
+        font-weight: 500;
     }
     
     .editor {
-        padding: 1rem;
-        border: 1px solid #ced4da;
-        border-radius: 0.25rem;
+        padding: 2rem;
+        border: 1px solid #e9ecef;
+        border-radius: 0.375rem;
         outline: none;
         font-family: 'Arial', sans-serif;
-        line-height: 1.6;
+        line-height: 1.7;
+        min-height: calc(100vh - 400px);
+        background-color: #fff;
+        box-shadow: inset 0 1px 2px rgba(0,0,0,.05);
     }
     
+    .editor h2 {
+        color: #2c3e50;
+        font-size: 1.75rem;
+        font-weight: 600;
+        margin-top: 2rem;
+        margin-bottom: 1.25rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 2px solid #e9ecef;
+    }
+
+    .editor h3 {
+        color: #34495e;
+        font-size: 1.35rem;
+        font-weight: 500;
+        margin-top: 1.75rem;
+        margin-bottom: 1rem;
+        padding-left: 0.5rem;
+        border-left: 3px solid #3498db;
+    }
+
+    .editor p {
+        color: #495057;
+        font-size: 1.1rem;
+        line-height: 1.8;
+        margin-bottom: 1.5rem;
+        padding: 0 0.5rem;
+    }
+
+    .editor h2:first-child {
+        margin-top: 0;
+    }
+
     .editor:focus {
         border-color: #86b7fe;
-        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.1);
     }
-    
+
     .grammar-suggestion {
         background-color: #fff3cd;
         border-bottom: 2px wavy #ffc107;
         cursor: pointer;
     }
 
-    [contenteditable="true"] {
-        outline: none;
+    .nav-tabs .nav-link {
+        color: #6c757d;
+        font-weight: 500;
     }
 
-    #blogTitle {
-        padding: 0.5rem;
-        border-radius: 0.25rem;
+    .nav-tabs .nav-link.active {
+        color: #0d6efd;
+        font-weight: 600;
     }
 
-    #blogTitle:focus {
-        background-color: #f8f9fa;
+    .card {
+        border: none;
+        box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075);
+    }
+
+    .card-header {
+        background-color: #fff;
+        border-bottom: none;
+    }
+
+    #draftPreview {
+        padding: 1rem;
+        background-color: #fff;
+        border: 1px solid #e9ecef;
+        border-radius: 0.375rem;
+    }
+
+    #draftPreview p {
+        margin-bottom: 1rem;
+    }
+
+    #draftPreview h2 {
+        margin-top: 2rem;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #e9ecef;
+    }
+
+    #draftPreview h3 {
+        margin-top: 1.5rem;
+        margin-bottom: 0.75rem;
+        padding-left: 0.5rem;
+        border-left: 3px solid #3498db;
     }
 </style>
 
 <script>
-// Grammar check functionality
-document.getElementById('checkGrammarBtn').addEventListener('click', async function() {
-    const draftContent = document.getElementById('draftEditor').innerHTML;
-    
-    try {
-        const response = await fetch('/check-grammar/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': '{{ csrf_token }}'
-            },
-            body: JSON.stringify({ text: draftContent })
-        });
-        
-        if (response.ok) {
-            const data = await response.json();
-            // Implement grammar suggestion highlighting
-            highlightGrammarSuggestions(data.suggestions);
+    // Debug logging helper
+    function logObject(label, obj) {
+        console.group(label);
+        console.log('Type:', typeof obj);
+        console.log('Value:', obj);
+        if (obj && typeof obj === 'object') {
+            console.log('Keys:', Object.keys(obj));
+            console.log('Stringified:', JSON.stringify(obj, null, 2));
         }
-    } catch (error) {
-        console.error('Error checking grammar:', error);
-        alert('Error checking grammar. Please try again.');
+        console.groupEnd();
     }
-});
 
-// Save changes functionality
-document.getElementById('saveChangesBtn').addEventListener('click', async function() {
-    const blogData = {
-        blog_title: document.getElementById('blogTitle').textContent,
-        blog_outline: document.getElementById('outlineEditor').innerHTML,
-        blog_draft: document.getElementById('draftEditor').innerHTML
-    };
-    
-    try {
-        const response = await fetch('{% url "core:update_blog" blog.id %}', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': '{{ csrf_token }}'
-            },
-            body: JSON.stringify(blogData)
-        });
-        
-        if (response.ok) {
-            alert('Changes saved successfully!');
-        } else {
-            const error = await response.json();
-            alert(error.error || 'Error saving changes. Please try again.');
+    // Initialize everything when DOM is loaded
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize outline and draft content
+        try {
+            const outlineData = JSON.parse(document.getElementById('blog-outline-data').textContent || 'null');
+            console.log('Outline data:', outlineData);
+            
+            const outlineContent = document.getElementById('outlineContent');
+            if (outlineContent) {
+                let outlineHtml = '';
+                
+                // For new blogs or when outline is not yet generated
+                if (!outlineData || Object.keys(outlineData).length === 0) {
+                    outlineHtml = `
+                        <h2>Introduction</h2>
+                        <h2>Understanding WhatsApp AI Agents</h2>
+                        <h2>The Intersection of WooCommerce and WhatsApp AI</h2>
+                        <h2>Implementing WhatsApp AI Agents</h2>
+                        <h2>Future Trends in AI Sales and Customer Service</h2>
+                        <h2>Conclusion</h2>
+                    `;
+                } else {
+                    // Process introduction
+                    if (outlineData.introduction) {
+                        outlineHtml += `<h2>Introduction</h2>`;
+                        if (outlineData.introduction.content) {
+                            outlineHtml += `<p>${outlineData.introduction.content}</p>`;
+                        }
+                    }
+
+                    // Process main sections
+                    const mainSections = [
+                        'Understanding WhatsApp AI Agents',
+                        'The Intersection of WooCommerce and WhatsApp AI',
+                        'Implementing WhatsApp AI Agents',
+                        'Future Trends in AI Sales and Customer Service'
+                    ];
+
+                    mainSections.forEach(section => {
+                        const h2Key = `H2: ${section}`;
+                        const h3Key = `H3: ${section}`;
+                        
+                        if (outlineData[h2Key]) {
+                            outlineHtml += `<h2>${section}</h2>`;
+                            if (outlineData[h3Key] && outlineData[h3Key].content) {
+                                outlineHtml += `<h3>${outlineData[h3Key].content}</h3>`;
+                            }
+                        }
+                    });
+                    
+                    // Process conclusion
+                    if (outlineData.conclusion) {
+                        outlineHtml += `<h2>Conclusion</h2>`;
+                        if (outlineData.conclusion.content) {
+                            outlineHtml += `<p>${outlineData.conclusion.content}</p>`;
+                        }
+                    }
+                }
+                
+                outlineContent.innerHTML = outlineHtml || '<p class="text-muted">No outline content available</p>';
+            }
+
+            // Draft preview functionality
+            const draftTextarea = document.getElementById('draftTextarea');
+            const draftPreview = document.getElementById('draftPreview');
+            const editTab = document.getElementById('editTab');
+            const previewTab = document.getElementById('previewTab');
+
+            function renderPreview(content) {
+                if (!content) return;
+                const html = content
+                    .replace(/^### (.+)$/gm, '<h2>$1</h2>')
+                    .replace(/^#### (.+)$/gm, '<h3>$1</h3>')
+                    .replace(/\n\n+/g, '</p><p>')
+                    .replace(/^/g, '<p>')
+                    .replace(/$/g, '</p>');
+                draftPreview.innerHTML = html;
+            }
+
+            // Function to format outline as markdown text
+            function formatOutlineAsDraft(outlineData) {
+                let draftText = '';
+                
+                // Add Introduction
+                if (outlineData.introduction && outlineData.introduction.content) {
+                    draftText += '### Introduction\n\n';
+                    draftText += outlineData.introduction.content + '\n\n';
+                }
+
+                // Add main sections
+                mainSections.forEach(section => {
+                    const h2Key = `H2: ${section}`;
+                    const h3Key = `H3: ${section}`;
+                    
+                    if (outlineData[h2Key]) {
+                        draftText += `### ${section}\n\n`;
+                        if (outlineData[h3Key] && outlineData[h3Key].content) {
+                            draftText += `${outlineData[h3Key].content}\n\n`;
+                        }
+                    }
+                });
+
+                // Add Conclusion
+                if (outlineData.conclusion && outlineData.conclusion.content) {
+                    draftText += '### Conclusion\n\n';
+                    draftText += outlineData.conclusion.content + '\n\n';
+                }
+
+                return draftText;
+            }
+
+            // Initialize draft content
+            if (draftTextarea) {
+                const draftData = JSON.parse(document.getElementById('blog-draft-data').textContent);
+                if (!draftData || draftData === 'null' || draftData.trim() === '') {
+                    // If no draft exists, generate it from outline
+                    const generatedDraft = formatOutlineAsDraft(outlineData);
+                    draftTextarea.value = generatedDraft;
+                    renderPreview(generatedDraft);
+                } else {
+                    // If draft exists, use it
+                    draftTextarea.value = draftData;
+                    renderPreview(draftData);
+                }
+            }
+
+            // Tab switching handlers
+            if (editTab) {
+                editTab.addEventListener('click', function() {
+                    editTab.classList.add('active');
+                    previewTab.classList.remove('active');
+                    draftTextarea.style.display = 'block';
+                    draftPreview.style.display = 'none';
+                });
+            }
+
+            if (previewTab) {
+                previewTab.addEventListener('click', function() {
+                    previewTab.classList.add('active');
+                    editTab.classList.remove('active');
+                    draftTextarea.style.display = 'none';
+                    draftPreview.style.display = 'block';
+                    renderPreview(draftTextarea.value);
+                });
+            }
+
+        } catch (error) {
+            console.error('Error processing outline:', error);
+            const outlineContent = document.getElementById('outlineContent');
+            if (outlineContent) {
+                outlineContent.innerHTML = '<p class="text-muted">Error loading outline content</p>';
+            }
         }
-    } catch (error) {
-        console.error('Error saving changes:', error);
-        alert('Error saving changes. Please try again.');
-    }
-});
 
-function highlightGrammarSuggestions(suggestions) {
-    const draftEditor = document.getElementById('draftEditor');
-    let content = draftEditor.innerHTML;
-    
-    // Sort suggestions by position (descending) to avoid offset issues
-    suggestions.sort((a, b) => b.from - a.from);
-    
-    suggestions.forEach(suggestion => {
-        const before = content.substring(0, suggestion.from);
-        const highlighted = content.substring(suggestion.from, suggestion.to);
-        const after = content.substring(suggestion.to);
-        
-        content = before +
-            `<span class="grammar-suggestion" title="${suggestion.message}">${highlighted}</span>` +
-            after;
+        // Initialize Bootstrap tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+
+        // Grammar check functionality
+        document.getElementById('checkGrammarBtn').addEventListener('click', async function() {
+            const draftContent = document.getElementById('draftEditor').innerHTML;
+            const button = this;
+            const originalText = button.innerHTML;
+            
+            try {
+                button.disabled = true;
+                button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking...';
+                
+                const response = await fetch('/check-grammar/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: JSON.stringify({ text: draftContent })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    highlightGrammarSuggestions(data.suggestions);
+                    // Switch to draft tab to show suggestions
+                    document.querySelector('a[href="#draft"]').click();
+                }
+            } catch (error) {
+                console.error('Error checking grammar:', error);
+                alert('Error checking grammar. Please try again.');
+            } finally {
+                button.disabled = false;
+                button.innerHTML = originalText;
+            }
+        });
+
+        // Update the formatContentForSave function
+        function formatContentForSave(content) {
+            const temp = document.createElement('div');
+            temp.innerHTML = content;
+            
+            const formattedContent = {};
+            let currentH2 = null;
+            let h2Count = 1;
+            let h3Count = 1;
+            
+            Array.from(temp.children).forEach((element) => {
+                const text = element.textContent.trim();
+                
+                if (element.tagName === 'H2') {
+                    if (text.toLowerCase() === 'introduction') {
+                        formattedContent.introduction = {
+                            content: getNextParagraphContent(element)
+                        };
+                    } else if (text.toLowerCase() === 'conclusion') {
+                        formattedContent.conclusion = {
+                            content: getNextParagraphContent(element)
+                        };
+                    } else {
+                        currentH2 = `H2_${h2Count++}`;
+                        formattedContent[currentH2] = text;
+                        h3Count = 1;
+                    }
+                } else if (element.tagName === 'H3' && currentH2) {
+                    formattedContent[`${currentH2}_${h3Count++}`] = {
+                        content: text
+                    };
+                }
+            });
+            
+            return formattedContent;
+        }
+
+        function getNextParagraphContent(element) {
+            let next = element.nextElementSibling;
+            return next && next.tagName === 'P' ? next.textContent.trim() : '';
+        }
+
+        // Update save changes functionality
+        document.getElementById('saveChangesBtn').addEventListener('click', async function() {
+            const button = this;
+            const originalText = button.innerHTML;
+            
+            const blogData = {
+                blog_title: document.getElementById('blogTitle').textContent,
+                blog_outline: formatContentForSave(document.getElementById('outlineEditor').innerHTML),
+                blog_draft: formatContentForSave(document.getElementById('draftEditor').innerHTML)
+            };
+            
+            try {
+                button.disabled = true;
+                button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+                
+                const response = await fetch('{% url "core:update_blog" blog.id %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: JSON.stringify(blogData)
+                });
+                
+                if (response.ok) {
+                    // Show success toast
+                    const toast = document.createElement('div');
+                    toast.className = 'position-fixed bottom-0 end-0 p-3';
+                    toast.style.zIndex = '5';
+                    toast.innerHTML = `
+                        <div class="toast show" role="alert">
+                            <div class="toast-header bg-success text-white">
+                                <i class="fas fa-check me-2"></i>
+                                <strong class="me-auto">Success</strong>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+                            </div>
+                            <div class="toast-body">
+                                Changes saved successfully!
+                            </div>
+                        </div>
+                    `;
+                    document.body.appendChild(toast);
+                    setTimeout(() => toast.remove(), 3000);
+                } else {
+                    const error = await response.json();
+                    alert(error.error || 'Error saving changes. Please try again.');
+                }
+            } catch (error) {
+                console.error('Error saving changes:', error);
+                alert('Error saving changes. Please try again.');
+            } finally {
+                button.disabled = false;
+                button.innerHTML = originalText;
+            }
+        });
+
+        function highlightGrammarSuggestions(suggestions) {
+            const draftEditor = document.getElementById('draftEditor');
+            let content = draftEditor.innerHTML;
+            
+            // Sort suggestions by position (descending) to avoid offset issues
+            suggestions.sort((a, b) => b.from - a.from);
+            
+            suggestions.forEach(suggestion => {
+                const before = content.substring(0, suggestion.from);
+                const highlighted = content.substring(suggestion.from, suggestion.to);
+                const after = content.substring(suggestion.to);
+                
+                content = before +
+                    `<span class="grammar-suggestion" title="${suggestion.message}">${highlighted}</span>` +
+                    after;
+            });
+            
+            draftEditor.innerHTML = content;
+        }
     });
-    
-    draftEditor.innerHTML = content;
-}
 </script>
 {% endblock %} 
